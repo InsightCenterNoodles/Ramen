@@ -1,11 +1,35 @@
 
 function on_entity_create(state) {
     console.log("Hello!")
+
+
+    if (!('dataready' in state)) {
+        
+    }
 }
 
+function is_buffer_ready()
+
+function mark_buffer_ready(state, bytes) {
+    state.dataready = true
+    state.bytes = bytes
+}
+
+function on_buffer_create(state) {    
+    console.log(state)
+
+    if ("inline_bytes" in state) {
+        mark_buffer_ready(state, state.inline_bytes)
+    } else {
+
+    }
+}
 
 client = NOO.connect("ws://localhost:50000",
-    {entity : { on_create : on_entity_create }}
+    {
+        entity : { on_create : on_entity_create },
+        buffer : { on_create : on_buffer_create },
+    }
 )
 
 width = 720 // window.innerWidth
