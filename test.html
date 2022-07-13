@@ -1,0 +1,28 @@
+<head>
+    <title>Noodles Testing Page</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <script src="cbor.js" type="text/javascript"></script>
+    <script src="ramen.js" type="text/javascript"></script>
+    <script src="three.js" type="text/javascript"></script>
+    <script src="OrbitControls.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <header>
+        <H1>Noodles Web Client</H1>
+        <p>An example web client with NOODLES and three.js.</p>
+    </header>
+
+    <main>
+        <script src="three_client.js" type="text/javascript"></script>
+
+        <label for="server_url">Server</label>
+        <input type="text" name="server_url" id="server_url" placeholder="ws://localhost:50000">
+        <button onclick="start_connect();" type="button">Connect</button>
+
+    </main>
+
+    <footer>
+        Part of the NOODLES project
+    </footer>
+</body>
