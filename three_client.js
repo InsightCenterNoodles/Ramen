@@ -95,7 +95,8 @@ function get_or_default(o, prop, def) {
 const semantic_translate = {
     "POSITION": "position",
     "NORMAL": "normal",
-    "COLOR": "color"
+    "COLOR": "color",
+    "TEXTURE": "uv",
 }
 
 function view_to_attribute(patch, attrib, three_geometry, on_done) {
@@ -184,22 +185,27 @@ function view_to_index(patch, three_geometry, on_done) {
         switch (indicies.format) {
             case "U8":
                 typed_arr = new Uint8Array(bytes, offset, count)
+                three_geometry.setIndex(Array.from(typed_arr))
                 break;
             case "U16":
                 typed_arr = new Uint16Array(bytes, offset, count)
+                three_geometry.setIndex(new THREE.Uint16BufferAttribute(typed_arr, 1))
                 break;
             case "U32":
                 typed_arr = new Uint32Array(bytes, offset, count)
+                three_geometry.setIndex(new THREE.Uint32BufferAttribute(typed_arr, 1))
                 break;
             default:
                 throw "Invalid format"
         }
 
-        console.log(typed_arr)
+        // console.log(typed_arr)
 
-        three_geometry.setIndex(Array.from(typed_arr))
+        //three_geometry.setIndex(new BufferAttribute(typed_arr, 1))
 
-        console.log(`Added index ${typed_arr.length} to`, three_geometry)
+        //three_geometry.setIndex(Array.from(typed_arr))
+
+        console.log(`Added ${indicies.format} index ${typed_arr.length} to`, three_geometry)
 
         on_done()
     });
@@ -450,12 +456,19 @@ if (false) {
 }
 
 {
-    let light_object = new THREE.DirectionalLight(0xffffff, 2.0)
+    let light_object = new THREE.DirectionalLight(0xffffff, 1.0)
 
     light_object.position.set(1, 1, 1)
     light_object.castShadow = true
 
     scene.add(light_object)
+
+    let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 1.0)
+
+    light_object2.position.set(-1, 1, -1)
+    light_object2.castShadow = false
+
+    scene.add(light_object2)
 
     let amb_light_object = new THREE.AmbientLight(0x101010)
     scene.add(amb_light_object)
