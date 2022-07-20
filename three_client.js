@@ -211,6 +211,71 @@ function view_to_index(patch, three_geometry, on_done) {
     });
 }
 
+function make_instances(client, mesh, instances_source, buffer_data) {
+    let view = client.bufferview_list.get(instances_source.view)
+
+    console.log("Setting up instances");
+
+    if ("stride" in instances_source) {
+        let s = instances_source.stride
+        if (s > format_to_bytesize["MAT4"]) {
+            throw "TODO: need to copy instance data!"
+        }
+    }
+
+    let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
+
+    let typed_arr = new Float32Array(buffer_data, view.offset, instance_count * 16)
+
+    const matrix = new THREE.Matrix4();
+    const offset = new THREE.Vector3();
+    const color = new THREE.Vector3();
+    const orientation = new THREE.Quaternion();
+    const scale = new THREE.Vector3(1, 1, 1);
+
+    for (let i = 0; i < instance_count; i++) {
+        let float_offset = i * 16;
+
+        let read_off = float_offset
+
+        // stored in column order
+        offset.set(
+            typed_arr[read_off],
+            typed_arr[read_off + 1],
+            typed_arr[read_off + 2])
+
+        read_off += 4
+
+        color.set(
+            typed_arr[read_off],
+            typed_arr[read_off + 1],
+            typed_arr[read_off + 2])
+
+        read_off += 4
+
+        orientation.set(
+            typed_arr[read_off],
+            typed_arr[read_off + 1],
+            typed_arr[read_off + 2],
+            typed_arr[read_off + 3])
+
+        read_off += 4
+
+        scale.set(
+            typed_arr[read_off],
+            typed_arr[read_off + 1],
+            typed_arr[read_off + 2])
+
+        matrix.compose(offset, orientation, scale);
+
+        mesh.setMatrixAt(i, matrix);
+        mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
+    }
+
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.instanceColor.needsUpdate = true
+}
+
 function noo_color_convert(noo_col) {
     console.log("COLOR", noo_col)
     return new THREE.Color(noo_col[0], noo_col[1], noo_col[2])
@@ -220,12 +285,25 @@ function make_render_rep(client, parent, render_rep) {
 
     let m = client.geometry_list.get(render_rep.mesh);
 
-    m.pending_sub_meshs.then(function (value) {
+    let to_await = [m.pending_sub_meshs]
+
+    if ("instances" in render_rep) {
+        let inst = render_rep.instances
+
+        let view = client.bufferview_list.get(inst.view)
+        let buffer = client.buffer_list.get(view.source_buffer)
+
+        to_await.push(buffer.byte_promise)
+    }
+
+
+    Promise.all(to_await).then(function (values) {
+        let sub_meshes = values[0]
         console.log("Creating mesh group")
         let group = new THREE.Group()
 
 
-        for (i of value) {
+        for (i of sub_meshes) {
             console.log("Adding sub object...", i)
 
             const noo_mat = client.material_list.get(i.noo_patch.material)
@@ -247,30 +325,50 @@ function make_render_rep(client, parent, render_rep) {
                     break;
             }
 
-            let o
+            let sub_object
 
-            switch (i.noo_patch.type) {
-                case "POINTS":
-                    o = new THREE.Points(i, mat)
-                    break;
-                case "LINES":
-                    o = new THREE.LineSegments(i, mat)
-                    break;
-                case "LINE_LOOP":
-                    o = new THREE.LineLoop(i, mat)
-                    break;
-                case "LINE_STRIP":
-                    o = new THREE.Line(i, mat)
-                    break;
-                case "TRIANGLES":
-                    o = new THREE.Mesh(i, mat)
-                    break;
-                case "TRIANGLE_STRIP":
-                    throw "Not yet implemented"
-                    break;
+            if ("instances" in render_rep) {
+                let inst = render_rep.instances
+
+                let view = client.bufferview_list.get(inst.view)
+                let buffer_data = values[1]
+
+                let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
+
+                switch (i.noo_patch.type) {
+                    case "TRIANGLES":
+                        sub_object = new THREE.InstancedMesh(i, mat, instance_count)
+                        make_instances(client, sub_object, inst, buffer_data)
+                        break;
+                    default:
+                        throw "Not yet implemented"
+                        break;
+                }
+
+            } else {
+                switch (i.noo_patch.type) {
+                    case "POINTS":
+                        sub_object = new THREE.Points(i, mat)
+                        break;
+                    case "LINES":
+                        sub_object = new THREE.LineSegments(i, mat)
+                        break;
+                    case "LINE_LOOP":
+                        sub_object = new THREE.LineLoop(i, mat)
+                        break;
+                    case "LINE_STRIP":
+                        sub_object = new THREE.Line(i, mat)
+                        break;
+                    case "TRIANGLES":
+                        sub_object = new THREE.Mesh(i, mat)
+                        break;
+                    case "TRIANGLE_STRIP":
+                        throw "Not yet implemented"
+                        break;
+                }
             }
 
-            group.add(o)
+            group.add(sub_object)
         }
 
         console.log("Adding group to parent", parent)
