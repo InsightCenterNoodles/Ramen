@@ -408,6 +408,58 @@ function on_entity_create(client, state) {
 
 }
 
+function is_null_id(id) {
+    return (id[0] == 4294967295 || id[1] == 4294967295);
+}
+
+function erase_children(e) {
+    while (e.children.length) {
+        e.remove(e.children[0])
+    }
+}
+
+function on_entity_update(client, state, new_state) {
+    console.log("Update 3js entity")
+
+    let e = state.three_entity
+
+    if (new_state.parent) {
+        e.removeFromParent()
+
+        if (is_null_id(state.parent)) {
+            scene.add(e)
+        } else {
+            client.entity_list.get(state.parent).three_entity.add(e)
+        }
+    }
+
+    if (state.transform) {
+        e.matrixAutoUpdate = false
+        e.matrixWorldNeedsUpdate = true
+        let m = new THREE.Matrix4()
+        m.set(...state.transform)
+        m.transpose();
+        console.log("UPDATE TF", e.uuid, state.transform, m);
+        e.matrix = m
+    }
+
+    if (state.render_rep) {
+        erase_children(e)
+        state.concrete_rep = make_render_rep(client, e, state.render_rep)
+    }
+
+}
+
+function on_entity_delete(client, state) {
+    let e = state.three_entity
+
+    e.removeFromParent()
+
+    if (state.concrete_rep) {
+        erase_children(e)
+    }
+}
+
 function on_buffer_create(client, state) {
     console.log(state)
 
@@ -505,10 +557,6 @@ function on_material_create(client, state) {
         metalness: noo_pbr.metallic,
         roughness: noo_pbr.roughness,
     })
-
-    // state.three_tris = new THREE.MeshBasicMaterial({
-    //     color: 0x00ff00, side: THREE.DoubleSide
-    // });
 }
 
 function on_material_delete(client, state) {
@@ -529,7 +577,11 @@ function start_connect() {
 
     client = NOO.connect(url.toString(),
         {
-            entity: { on_create: on_entity_create },
+            entity: {
+                on_create: on_entity_create,
+                on_update: on_entity_update,
+                on_delete: on_entity_delete
+            },
             buffer: { on_create: on_buffer_create },
             //       bufferview : { on_create : on_bufferview_create },
             geometry: {
