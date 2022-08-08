@@ -153,24 +153,24 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
 }
 
 function view_to_index(patch, three_geometry, on_done) {
-    let index_info = p.indicies
+    let index_info = p.indices
     console.log("Adding index", index_info)
 
-    let indicies = p.indicies
-    let view = client.bufferview_list.get(indicies.view)
+    let indices = p.indices
+    let view = client.bufferview_list.get(indices.view)
     let buffer = client.buffer_list.get(view.source_buffer)
     buffer.byte_promise.then(function (bytes) {
         console.log("Setting up index from view", view)
         console.log(`View of ${bytes.byteLength} bytes`)
         const offset = get_or_default(view, 'offset', 0) +
-            get_or_default(indicies, 'offset', 0)
+            get_or_default(indices, 'offset', 0)
 
-        let format_byte_size = format_to_bytesize[indicies.format]
+        let format_byte_size = format_to_bytesize[indices.format]
 
         const count = index_info.count
 
         const stride = function () {
-            let s = get_or_default(indicies, 'stride', 0)
+            let s = get_or_default(indices, 'stride', 0)
             if (s < format_byte_size) s = format_byte_size
             return s
         }();
@@ -182,7 +182,7 @@ function view_to_index(patch, three_geometry, on_done) {
 
         let typed_arr = [];
 
-        switch (indicies.format) {
+        switch (indices.format) {
             case "U8":
                 typed_arr = new Uint8Array(bytes, offset, count)
                 three_geometry.setIndex(Array.from(typed_arr))
@@ -205,7 +205,7 @@ function view_to_index(patch, three_geometry, on_done) {
 
         //three_geometry.setIndex(Array.from(typed_arr))
 
-        console.log(`Added ${indicies.format} index ${typed_arr.length} to`, three_geometry)
+        console.log(`Added ${indices.format} index ${typed_arr.length} to`, three_geometry)
 
         on_done()
     });
@@ -522,7 +522,7 @@ function on_mesh_create(client, state) {
                 console.log("Attribute", a.semantic)
             }
 
-            if ("indicies" in p) {
+            if ("indices" in p) {
                 to_go += 1
                 view_to_index(p, g, dec_func)
             }
