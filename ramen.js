@@ -108,6 +108,7 @@
             this.delegate_handlers.set(32, this.on_document_reset.bind(this))
             this.delegate_handlers.set(33, this.on_signal_invoke.bind(this))
             this.delegate_handlers.set(34, this.on_method_reply.bind(this))
+            this.delegate_handlers.set(35, this.on_doc_initialized.bind(this))
         }
 
         // SOCKET HANDLERS
@@ -158,6 +159,10 @@
         }
 
         on_method_reply(client, m) {
+
+        }
+
+        on_doc_initialized(client, m) {
 
         }
 

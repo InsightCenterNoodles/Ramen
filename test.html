@@ -1,6 +1,288 @@
 <head>
     <title>Noodles Testing Page</title>
-    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Style hacked from https://github.com/kevquirk/simple.css */
+        :root {
+            /* Set sans-serif & mono fonts */
+            --sans-font: -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
+                "Nimbus Sans L", Roboto, "Noto Sans", "Segoe UI", Arial, Helvetica,
+                "Helvetica Neue", sans-serif;
+            --mono-font: Consolas, Menlo, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+
+            /* Default (light) theme */
+            --bg: #fff;
+            --accent-bg: #f5f7ff;
+            --text: #212121;
+            --text-light: #585858;
+            --border: #898EA4;
+            --accent: #0d47a1;
+            --code: #d81b60;
+            --preformatted: #444;
+            --marked: #ffdd33;
+            --disabled: #efefef;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+                --bg: #212121;
+                --accent-bg: #2b2b2b;
+                --text: #dcdcdc;
+                --text-light: #ababab;
+                --accent: #ffb300;
+                --code: #f06292;
+                --preformatted: #ccc;
+                --disabled: #111;
+            }
+
+            img,
+            video {
+                opacity: 0.8;
+            }
+        }
+
+        html {
+            font-family: var(--sans-font);
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        button,
+        [role="button"],
+        input[type="submit"],
+        input[type="reset"],
+        input[type="button"],
+        label[type="button"] {
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent);
+            font-size: 1rem;
+            color: var(--bg);
+            padding: 0.7rem 0.9rem;
+            margin: 0.5rem 0;
+        }
+
+        button[disabled],
+        [role="button"][aria-disabled="true"],
+        input[type="submit"][disabled],
+        input[type="reset"][disabled],
+        input[type="button"][disabled],
+        input[type="checkbox"][disabled],
+        input[type="radio"][disabled],
+        select[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input:disabled,
+        textarea:disabled,
+        select:disabled {
+            cursor: not-allowed;
+            background-color: var(--disabled);
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        button:focus,
+        button:enabled:hover,
+        [role="button"]:focus,
+        [role="button"]:not([aria-disabled="true"]):hover,
+        input[type="submit"]:focus,
+        input[type="submit"]:enabled:hover,
+        input[type="reset"]:focus,
+        input[type="reset"]:enabled:hover,
+        input[type="button"]:focus,
+        input[type="button"]:enabled:hover,
+        label[type="button"]:focus,
+        label[type="button"]:hover {
+            filter: brightness(1.4);
+            cursor: pointer;
+        }
+
+        textarea,
+        select,
+        input {
+            font-size: inherit;
+            font-family: inherit;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            box-shadow: none;
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        label {
+            display: block;
+        }
+
+        textarea:not([cols]) {
+            width: 100%;
+        }
+
+        /* Add arrow to drop-down */
+        select:not([multiple]) {
+            background-image: linear-gradient(45deg, transparent 49%, var(--text) 51%),
+                linear-gradient(135deg, var(--text) 51%, transparent 49%);
+            background-position: calc(100% - 15px), calc(100% - 10px);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            padding-right: 25px;
+        }
+
+        /* checkbox and radio button style */
+        input[type="checkbox"],
+        input[type="radio"] {
+            vertical-align: middle;
+            position: relative;
+            width: min-content;
+        }
+
+        input[type="checkbox"]+label,
+        input[type="radio"]+label {
+            display: inline-block;
+        }
+
+        input[type="radio"] {
+            border-radius: 100%;
+        }
+
+        input[type="checkbox"]:checked,
+        input[type="radio"]:checked {
+            background-color: var(--accent);
+        }
+
+        input[type="checkbox"]:checked::after {
+            /* Creates a rectangle with colored right and bottom borders which is rotated to look like a check mark */
+            content: " ";
+            width: 0.18em;
+            height: 0.32em;
+            border-radius: 0;
+            position: absolute;
+            top: 0.05em;
+            left: 0.17em;
+            background-color: transparent;
+            border-right: solid var(--bg) 0.08em;
+            border-bottom: solid var(--bg) 0.08em;
+            font-size: 1.8em;
+            transform: rotate(45deg);
+        }
+
+        input[type="radio"]:checked::after {
+            /* creates a colored circle for the checked radio button  */
+            content: " ";
+            width: 0.25em;
+            height: 0.25em;
+            border-radius: 100%;
+            position: absolute;
+            top: 0.125em;
+            background-color: var(--bg);
+            left: 0.125em;
+            font-size: 32px;
+        }
+
+        /* Makes input fields wider on smaller screens */
+        @media only screen and (max-width: 720px) {
+
+            textarea,
+            select,
+            input {
+                width: 100%;
+            }
+        }
+
+        /* Set a height for color input */
+        input[type="color"] {
+            height: 2.5rem;
+            padding: 0.2rem;
+        }
+
+        /* do not show border around file selector button */
+        input[type="file"] {
+            border: 0;
+        }
+
+
+        /* Style the side navigation */
+        .sidenav {
+            height: 100%;
+            width: 200px;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            overflow-x: hidden;
+        }
+
+
+        /* Side navigation links */
+        .sidenav a {
+            color: white;
+            padding: 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        /* Change color on hover */
+        .sidenav a:hover {
+            background-color: #222;
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Style the content */
+        .content {
+            /* margin-left: 200px; */
+            /* padding-left: 20px; */
+            height: 100%;
+        }
+
+        #c {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        progress {
+            width: 100%;
+        }
+
+        progress:indeterminate {
+            background-color: var(--accent-bg);
+        }
+
+        progress::-webkit-progress-bar {
+            border-radius: 5px;
+            background-color: var(--accent-bg);
+        }
+
+        progress::-webkit-progress-value {
+            border-radius: 5px;
+            background-color: var(--accent);
+        }
+
+        progress::-moz-progress-bar {
+            border-radius: 5px;
+            background-color: var(--accent);
+            transition-property: width;
+            transition-duration: 0.3s;
+        }
+
+        progress:indeterminate::-moz-progress-bar {
+            background-color: var(--accent-bg);
+        }
+    </style>
     <script src="cbor.js" type="text/javascript"></script>
     <script src="ramen.js" type="text/javascript"></script>
     <script src="three.js" type="text/javascript"></script>
@@ -8,21 +290,28 @@
 </head>
 
 <body>
-    <header>
-        <H1>Noodles Web Client</H1>
-        <p>An example web client with NOODLES and three.js.</p>
-    </header>
+    <div class="sidenav">
+        <H3>Noodles @ Web</H3>
+        <!-- <a href="#">Link</a>
+        <a href="#">Link</a>
+        <a href="#">Link</a> -->
 
-    <main>
+        <!-- <label for="server_url">Server</label> -->
+        <div>
+            <input type="text" name="server_url" id="server_url" placeholder="ws://localhost:50000">
+            <button onclick="start_connect();" type="button">Connect</button>
+
+        </div>
+        <hr>
+
+        <div>
+            
+        </div>
+
+    </div>
+
+    <div id="three_spot" class="content">
+        <canvas id="c"></canvas>
         <script src="three_client.js" type="text/javascript"></script>
-
-        <label for="server_url">Server</label>
-        <input type="text" name="server_url" id="server_url" placeholder="ws://localhost:50000">
-        <button onclick="start_connect();" type="button">Connect</button>
-
-    </main>
-
-    <footer>
-        Part of the NOODLES project
-    </footer>
+    </div>
 </body>

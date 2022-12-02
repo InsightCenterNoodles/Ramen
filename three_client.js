@@ -1,16 +1,19 @@
 
 // Set up render window
-width = 720 // window.innerWidth
-height = 512
+canvas = document.querySelector("#c")
+//width = document.getElementById("three_spot").width
+// height = document.getElementById("three_spot").height
+//width = 500
+//height = 500
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(width, height);
+const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
+//renderer.setSize(width, height);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.appendChild(renderer.domElement);
+document.getElementById("three_spot").appendChild(renderer.domElement);
 
 controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.listenToKeyEvents(window); // optional
@@ -19,7 +22,8 @@ controls.dampingFactor = 0.05;
 controls.screenSpacePanning = false;
 controls.minDistance = .1;
 controls.maxDistance = 500;
-controls.maxPolarAngle = Math.PI / 2;
+//controls.minPolarAngle = -Math.PI / 2;
+controls.maxPolarAngle = Math.PI;
 
 const format_to_bytesize = {
     "U8": 1,
@@ -199,12 +203,6 @@ function view_to_index(patch, three_geometry, on_done) {
                 throw "Invalid format"
         }
 
-        // console.log(typed_arr)
-
-        //three_geometry.setIndex(new BufferAttribute(typed_arr, 1))
-
-        //three_geometry.setIndex(Array.from(typed_arr))
-
         console.log(`Added ${indices.format} index ${typed_arr.length} to`, three_geometry)
 
         on_done()
@@ -277,7 +275,6 @@ function make_instances(client, mesh, instances_source, buffer_data) {
 }
 
 function noo_color_convert(noo_col) {
-    console.log("COLOR", noo_col)
     return new THREE.Color(noo_col[0], noo_col[1], noo_col[2])
 }
 
@@ -557,12 +554,71 @@ function on_material_create(client, state) {
         metalness: noo_pbr.metallic,
         roughness: noo_pbr.roughness,
     })
+
+    if (get_or_default(state, "double_sided", false)) {
+        state.three_tris.side = THREE.DoubleSide
+    }
+
+    let texture_ref = get_or_default(noo_pbr, "base_color_texture", undefined)
+    if (texture_ref) {
+
+        let texture_info = client.texture_list.get(texture_ref["texture"])
+
+        texture_info.texture_promise.then(function (loader) {
+            state.three_tris.map = loader
+        })
+
+    }
+
 }
 
 function on_material_delete(client, state) {
     state.three_points.dispose()
     state.three_lines.dispose()
     state.three_tris.dispose()
+}
+
+function on_texture_create(client, state) {
+    console.log("NEW TEXTURE", state)
+
+    state.texture_promise = new Promise(function (resolve, reject) {
+        // get the image
+
+        let image_info = client.image_list.get(state.image)
+
+        let source_info = get_or_default(image_info, "buffer_source", undefined)
+
+        if (source_info) {
+            // its an id
+            let buffer_view_info = client.bufferview_list.get(source_info)
+            let buffer_info = client.buffer_list.get(buffer_view_info.source_buffer)
+
+            buffer_info.byte_promise.then(function (bytes) {
+                const b_offset = get_or_default(buffer_view_info, 'offset', 0)
+                const b_len = get_or_default(buffer_view_info, 'length', 0)
+
+                const view = bytes.slice(b_offset, b_offset + b_len)
+
+                //console.log("TEXTURE:", b_offset, b_len, bytes.byteLength, view)
+
+                let data = "data:image/png;base64," + btoa(
+                    new Uint8Array(view)
+                        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+                );
+
+                let loader = new THREE.TextureLoader();
+                resolve(loader.load(data))
+            })
+
+        } else {
+            let loader = new THREE.TextureLoader();
+            loader.load(get_or_default(image_info, "uri_source", undefined))
+
+            resolve(loader.load(data))
+        }
+
+    })
+
 }
 
 function start_connect() {
@@ -591,18 +647,12 @@ function start_connect() {
             material: {
                 on_create: on_material_create,
                 on_delete: on_material_delete
+            },
+            texture: {
+                on_create: on_texture_create,
             }
         }
     )
-}
-
-
-if (false) {
-    const geometry = new THREE.BoxGeometry(.1, .1, .1);
-    const material = new THREE.MeshPhysicalMaterial({ color: 0x00ff00 });
-
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
 }
 
 {
@@ -626,10 +676,29 @@ if (false) {
 
 camera.position.z = 5;
 
+// from Three.js tut
+function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const pixelRatio = window.devicePixelRatio;
+    const width = canvas.clientWidth * pixelRatio | 0;
+    const height = canvas.clientHeight * pixelRatio | 0;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+        renderer.setSize(width, height, false);
+    }
+    return needResize;
+}
+
 function animate() {
     requestAnimationFrame(animate);
 
     controls.update();
+
+    if (resizeRendererToDisplaySize(renderer)) {
+        const canvas = renderer.domElement;
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+    }
 
     renderer.render(scene, camera);
 }
