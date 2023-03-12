@@ -612,9 +612,9 @@ function on_texture_create(client, state) {
 
         } else {
             let loader = new THREE.TextureLoader();
-            loader.load(get_or_default(image_info, "uri_source", undefined))
+            resolve(loader.load(get_or_default(image_info, "uri_source", undefined)))
 
-            resolve(loader.load(data))
+            //resolve(loader.load(data))
         }
 
     })
