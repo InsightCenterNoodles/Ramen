@@ -478,8 +478,7 @@ function on_buffer_create(client, state) {
         req.responseType = "arraybuffer";
         req.onload = function () {
             if (req.status == 200) {
-                console.log("Download completed")
-                console.log(req.response)
+                console.log("Download completed:", req.response)
                 resolve(req.response)
             } else {
                 reject("Buffer not found")
@@ -502,6 +501,14 @@ function on_mesh_create(client, state) {
             to_go -= 1
 
             if (to_go == 0) {
+
+                for (a of arr) {
+                    if (!a.hasAttribute("normal")) {
+                        console.log("Computing missing normal information...")
+                        a.computeVertexNormals()
+                    }
+                }
+
                 resolve(arr)
             }
         }
@@ -517,6 +524,10 @@ function on_mesh_create(client, state) {
                 view_to_attribute(p, a, g, dec_func)
 
                 console.log("Attribute", a.semantic)
+
+                if (a.semantic == "NORMAL") {
+                    has_normals = true
+                }
             }
 
             if ("indices" in p) {
@@ -524,7 +535,9 @@ function on_mesh_create(client, state) {
                 view_to_index(p, g, dec_func)
             }
 
-            console.log("Adding sub mesh...")
+
+            console.log("Adding sub mesh...", g)
+
             arr.push(g)
         }
     });
@@ -556,20 +569,48 @@ function on_material_create(client, state) {
     })
 
     if (get_or_default(state, "double_sided", false)) {
+        console.log("Material is double sided")
         state.three_tris.side = THREE.DoubleSide
     }
 
     let texture_ref = get_or_default(noo_pbr, "base_color_texture", undefined)
     if (texture_ref) {
-
         let texture_info = client.texture_list.get(texture_ref["texture"])
 
+        console.log("Material needs texture, setting up future...", texture_info.texture_promise)
+
         texture_info.texture_promise.then(function (loader) {
+            let sampler_id = get_or_default(texture_info, "sampler", undefined)
+            console.log("Checking texture sampler: ", sampler_id)
+
+            if (sampler_id) {
+                sampler = client.sampler_list.get(sampler_id)
+
+                console.log("Using sampler: ", sampler)
+
+                let mag = get_or_default(sampler, "mag_filter", "LINEAR")
+                let min = get_or_default(sampler, "min_filter", "LINEAR_MIPMAP_LINEAR")
+
+                console.log("Sampler params:", mag, min)
+
+                if (mag == "NEAREST") {
+                    loader.magFilter = THREE.NearestFilter
+                }
+
+                if (min == "NEAREST") {
+                    loader.minFilter = THREE.NearestFilter
+                }
+            }
+
+            loader.flipY = false
+
             state.three_tris.map = loader
+            state.three_tris.needsUpdate = true
         })
 
     }
 
+    state.three_tris.needsUpdate = true
 }
 
 function on_material_delete(client, state) {
@@ -584,37 +625,50 @@ function on_texture_create(client, state) {
     state.texture_promise = new Promise(function (resolve, reject) {
         // get the image
 
+        console.log("Setting up texture promise")
+
         let image_info = client.image_list.get(state.image)
 
         let source_info = get_or_default(image_info, "buffer_source", undefined)
 
         if (source_info) {
-            // its an id
+            console.log("Using buffer for texture source")
+            // its a buffer
             let buffer_view_info = client.bufferview_list.get(source_info)
             let buffer_info = client.buffer_list.get(buffer_view_info.source_buffer)
 
+            console.log("Source buffer byte promise", buffer_info.byte_promise)
+
             buffer_info.byte_promise.then(function (bytes) {
+
+                console.log("Image source buffer ready for texture")
+
                 const b_offset = get_or_default(buffer_view_info, 'offset', 0)
                 const b_len = get_or_default(buffer_view_info, 'length', 0)
 
                 const view = bytes.slice(b_offset, b_offset + b_len)
 
-                //console.log("TEXTURE:", b_offset, b_len, bytes.byteLength, view)
+                console.log("Texture buffer info:", b_offset, b_len, bytes.byteLength, view)
 
                 let data = "data:image/png;base64," + btoa(
                     new Uint8Array(view)
                         .reduce((data, byte) => data + String.fromCharCode(byte), '')
                 );
 
+                //console.log("Data:", data)
+
                 let loader = new THREE.TextureLoader();
-                resolve(loader.load(data))
+
+                loader.load(data, function (texture) {
+                    resolve(texture)
+                });
+
             })
 
         } else {
+            // from a remote source
             let loader = new THREE.TextureLoader();
             resolve(loader.load(get_or_default(image_info, "uri_source", undefined)))
-
-            //resolve(loader.load(data))
         }
 
     })
@@ -675,6 +729,12 @@ function start_connect() {
 }
 
 camera.position.z = 5;
+
+const size = 10;
+const divisions = 10;
+
+const gridHelper = new THREE.GridHelper(size, divisions);
+scene.add(gridHelper);
 
 // from Three.js tut
 function resizeRendererToDisplaySize(renderer) {
