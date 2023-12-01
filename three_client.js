@@ -430,7 +430,7 @@ function on_entity_update(client, state, new_state) {
         }
     }
 
-    if (state.transform) {
+    if (new_state.transform) {
         e.matrixAutoUpdate = false
         e.matrixWorldNeedsUpdate = true
         let m = new THREE.Matrix4()
@@ -440,7 +440,7 @@ function on_entity_update(client, state, new_state) {
         e.matrix = m
     }
 
-    if (state.render_rep) {
+    if (new_state.render_rep) {
         erase_children(e)
         state.concrete_rep = make_render_rep(client, e, state.render_rep)
     }
@@ -566,6 +566,7 @@ function on_material_create(client, state) {
         color: noo_base_col,
         metalness: noo_pbr.metallic,
         roughness: noo_pbr.roughness,
+        //vertexColors: true,
     })
 
     if (get_or_default(state, "double_sided", false)) {
@@ -710,22 +711,22 @@ function start_connect() {
 }
 
 {
-    let light_object = new THREE.DirectionalLight(0xffffff, 1.0)
+    let light_object = new THREE.DirectionalLight(0xffffff, 2.0)
 
     light_object.position.set(1, 1, 1)
     light_object.castShadow = true
 
     scene.add(light_object)
 
-    let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 1.0)
+    let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 2.0)
 
     light_object2.position.set(-1, 1, -1)
     light_object2.castShadow = false
 
     scene.add(light_object2)
 
-    let amb_light_object = new THREE.AmbientLight(0x101010)
-    scene.add(amb_light_object)
+    //let amb_light_object = new THREE.AmbientLight('white', .1)
+    //scene.add(amb_light_object)
 }
 
 camera.position.z = 5;
@@ -735,6 +736,12 @@ const divisions = 10;
 
 const gridHelper = new THREE.GridHelper(size, divisions);
 scene.add(gridHelper);
+
+// var cube = new THREE.Mesh(
+//     new THREE.BoxGeometry(1, 1, 1, 2, 2, 2),
+//     new THREE.MeshPhysicalMaterial({ color: "grey" })
+// )
+// scene.add(cube)
 
 // from Three.js tut
 function resizeRendererToDisplaySize(renderer) {

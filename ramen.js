@@ -38,7 +38,7 @@
 
         on_create_msg(client, m) {
             let slot = m.id[0]
-            console.log(this.name, "create", slot)
+            //console.log(this.name, "create", slot)
             this.slot_list[slot] = m
             if (this.client_delegate.on_create) {
                 this.client_delegate.on_create(client, m)
@@ -46,7 +46,7 @@
         }
         on_delete_msg(client, m) {
             let slot = m.id[0]
-            console.log(this.name, "delete", slot)
+            //console.log(this.name, "delete", slot)
             if (this.client_delegate.on_delete) {
                 this.client_delegate.on_delete(client, this.slot_list[slot])
             }
@@ -54,7 +54,7 @@
         }
         on_update_msg(client, m) {
             let slot = m.id[0]
-            console.log(this.name, "update", slot)
+            //console.log(this.name, "update", slot)
             let state = this.slot_list[slot]
             update_keys(state, m)
             if (this.client_delegate.on_update) {
@@ -123,6 +123,8 @@
 
         on_socket_message(e) {
             var decoded = CBOR.decode(e.data);
+
+            //console.log(decoded)
 
             for (let i = 0, len = decoded.length; i < len; i += 2) {
                 this.handle_decoded_message(decoded[i], decoded[i + 1])
