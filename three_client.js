@@ -52,7 +52,7 @@ const format_to_simdcount = {
 }
 
 function bytes_to_interleaved_buffer(format, bytes, offset, stride, vertex_count) {
-    console.log(`Format to typed array Format: ${format}, Bytes len ${bytes.byteLength}, Offset ${offset}, Stride ${stride}, Vcount ${vertex_count}`)
+    //console.log(`Format to typed array Format: ${format}, Bytes len ${bytes.byteLength}, Offset ${offset}, Stride ${stride}, Vcount ${vertex_count}`)
     let arr = null;
     let interleaved_count = 0;
     const simd_byte_size = format_to_bytesize[format]
@@ -109,8 +109,8 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
     let view = client.bufferview_list.get(attrib.view)
     let buffer = client.buffer_list.get(view.source_buffer)
     buffer.byte_promise.then(function (bytes) {
-        console.log("Setting up attribute from view", attrib, view)
-        console.log(`View of ${bytes.byteLength} bytes`)
+        //console.log("Setting up attribute from view", attrib, view)
+        //console.log(`View of ${bytes.byteLength} bytes`)
         const offset = get_or_default(view, 'offset', 0) +
             get_or_default(attrib, 'offset', 0)
 
@@ -127,7 +127,7 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
 
         const normalized = get_or_default(attrib, 'normalized', false)
 
-        console.log("Resolved view parts", offset, length, stride)
+        //console.log("Resolved view parts", offset, length, stride)
 
         let interleaved_buffer = bytes_to_interleaved_buffer(
             attrib.format,
@@ -135,7 +135,7 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
             offset, stride, patch.vertex_count
         );
 
-        console.log("Interleaved attrib", interleaved_buffer)
+        //console.log("Interleaved attrib", interleaved_buffer)
 
         console.assert(interleaved_buffer.array.length > 0)
 
@@ -149,7 +149,7 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
 
         three_geometry.setAttribute(sname, interleaved_attribute)
 
-        console.log("Added attribute", interleaved_attribute, "to", three_geometry)
+        //console.log("Added attribute", interleaved_attribute, "to", three_geometry)
 
         on_done()
 
@@ -158,14 +158,14 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
 
 function view_to_index(patch, three_geometry, on_done) {
     let index_info = p.indices
-    console.log("Adding index", index_info)
+    //console.log("Adding index", index_info)
 
     let indices = p.indices
     let view = client.bufferview_list.get(indices.view)
     let buffer = client.buffer_list.get(view.source_buffer)
     buffer.byte_promise.then(function (bytes) {
-        console.log("Setting up index from view", view)
-        console.log(`View of ${bytes.byteLength} bytes`)
+        //console.log("Setting up index from view", view)
+        //console.log(`View of ${bytes.byteLength} bytes`)
         const offset = get_or_default(view, 'offset', 0) +
             get_or_default(indices, 'offset', 0)
 
@@ -203,7 +203,7 @@ function view_to_index(patch, three_geometry, on_done) {
                 throw "Invalid format"
         }
 
-        console.log(`Added ${indices.format} index ${typed_arr.length} to`, three_geometry)
+        //console.log(`Added ${indices.format} index ${typed_arr.length} to`, three_geometry)
 
         on_done()
     });
@@ -212,7 +212,7 @@ function view_to_index(patch, three_geometry, on_done) {
 function make_instances(client, mesh, instances_source, buffer_data) {
     let view = client.bufferview_list.get(instances_source.view)
 
-    console.log("Setting up instances");
+    //console.log("Setting up instances");
 
     if ("stride" in instances_source) {
         let s = instances_source.stride
@@ -296,12 +296,12 @@ function make_render_rep(client, parent, render_rep) {
 
     Promise.all(to_await).then(function (values) {
         let sub_meshes = values[0]
-        console.log("Creating mesh group")
+        //console.log("Creating mesh group")
         let group = new THREE.Group()
 
 
         for (i of sub_meshes) {
-            console.log("Adding sub object...", i)
+            //console.log("Adding sub object...", i)
 
             const noo_mat = client.material_list.get(i.noo_patch.material)
 
@@ -368,7 +368,7 @@ function make_render_rep(client, parent, render_rep) {
             group.add(sub_object)
         }
 
-        console.log("Adding group to parent", parent)
+        //console.log("Adding group to parent", parent)
 
         parent.add(group)
 
@@ -376,14 +376,14 @@ function make_render_rep(client, parent, render_rep) {
 }
 
 function on_entity_create(client, state) {
-    console.log("New 3js entity")
+    //console.log("New 3js entity")
 
     let e = new THREE.Object3D()
     state.three_entity = e
 
     e.name = state.name
 
-    if (state.parent) {
+    if (state.parent && !is_null_id(state.parent)) {
         client.entity_list.get(state.parent).three_entity.add(e)
     } else {
         scene.add(e)
@@ -395,7 +395,7 @@ function on_entity_create(client, state) {
         let m = new THREE.Matrix4()
         m.set(...state.transform)
         m.transpose();
-        console.log("UPDATE TF", e.uuid, state.transform, m);
+        //console.log("UPDATE TF", e.uuid, state.transform, m);
         e.matrix = m
     }
 
@@ -403,10 +403,13 @@ function on_entity_create(client, state) {
         state.concrete_rep = make_render_rep(client, e, state.render_rep)
     }
 
+    if (state.hasOwnProperty("visible")) {
+        e.visible = state.visible
+    }
 }
 
 function is_null_id(id) {
-    return (id[0] == 4294967295 || id[1] == 4294967295);
+    return (id[0] >= 4294967295 || id[1] >= 4294967295);
 }
 
 function erase_children(e) {
@@ -416,17 +419,17 @@ function erase_children(e) {
 }
 
 function on_entity_update(client, state, new_state) {
-    console.log("Update 3js entity")
+    //console.log("Update 3js entity")
 
     let e = state.three_entity
 
     if (new_state.parent) {
         e.removeFromParent()
 
-        if (is_null_id(state.parent)) {
+        if (is_null_id(new_state.parent)) {
             scene.add(e)
         } else {
-            client.entity_list.get(state.parent).three_entity.add(e)
+            client.entity_list.get(new_state.parent).three_entity.add(e)
         }
     }
 
@@ -436,15 +439,18 @@ function on_entity_update(client, state, new_state) {
         let m = new THREE.Matrix4()
         m.set(...state.transform)
         m.transpose();
-        console.log("UPDATE TF", e.uuid, state.transform, m);
+        //console.log("UPDATE TF", e.uuid, new_state.transform, m);
         e.matrix = m
     }
 
     if (new_state.render_rep) {
         erase_children(e)
-        state.concrete_rep = make_render_rep(client, e, state.render_rep)
+        state.concrete_rep = make_render_rep(client, e, new_state.render_rep)
     }
 
+    if (new_state.hasOwnProperty("visible")) {
+        e.visible = new_state.visible
+    }
 }
 
 function on_entity_delete(client, state) {
@@ -458,7 +464,7 @@ function on_entity_delete(client, state) {
 }
 
 function on_buffer_create(client, state) {
-    console.log(state)
+    //console.log(state)
 
     state.byte_promise = new Promise(function (resolve, reject) {
         if ("inline_bytes" in state) {
@@ -478,7 +484,7 @@ function on_buffer_create(client, state) {
         req.responseType = "arraybuffer";
         req.onload = function () {
             if (req.status == 200) {
-                console.log("Download completed:", req.response)
+                //console.log("Download completed:", req.response)
                 resolve(req.response)
             } else {
                 reject("Buffer not found")
@@ -493,7 +499,7 @@ function on_mesh_create(client, state) {
 
         let arr = []
 
-        console.log("Mesh", state.patches)
+        //console.log("Mesh", state.patches)
 
         let to_go = state.patches.length
 
@@ -504,7 +510,7 @@ function on_mesh_create(client, state) {
 
                 for (a of arr) {
                     if (!a.hasAttribute("normal")) {
-                        console.log("Computing missing normal information...")
+                        //console.log("Computing missing normal information...")
                         a.computeVertexNormals()
                     }
                 }
@@ -518,12 +524,12 @@ function on_mesh_create(client, state) {
 
             g.noo_patch = p
 
-            console.log("Patch", p)
+            //console.log("Patch", p)
             for (a of p.attributes) {
 
                 view_to_attribute(p, a, g, dec_func)
 
-                console.log("Attribute", a.semantic)
+                //console.log("Attribute", a.semantic)
 
                 if (a.semantic == "NORMAL") {
                     has_normals = true
@@ -536,7 +542,7 @@ function on_mesh_create(client, state) {
             }
 
 
-            console.log("Adding sub mesh...", g)
+            //console.log("Adding sub mesh...", g)
 
             arr.push(g)
         }
@@ -559,6 +565,10 @@ function on_material_create(client, state) {
     const noo_pbr = state.pbr_info
 
     const noo_base_col = noo_color_convert(noo_pbr.base_color)
+    //const noo_base_col = noo_color_convert([0.9, 0.85, 0.49, 1])
+    //const noo_base_col = noo_color_convert([1, 0.5, 0.5, 1])
+
+    console.log("Base color", noo_pbr.base_color, noo_base_col)
 
     state.three_points = new THREE.PointsMaterial({ color: noo_base_col })
     state.three_lines = new THREE.LineBasicMaterial({ color: noo_base_col })
@@ -570,12 +580,12 @@ function on_material_create(client, state) {
     })
 
     if (get_or_default(state, "double_sided", false)) {
-        console.log("Material is double sided")
+        //console.log("Material is double sided")
         state.three_tris.side = THREE.DoubleSide
     }
 
     let texture_ref = get_or_default(noo_pbr, "base_color_texture", undefined)
-    if (texture_ref) {
+    if (texture_ref && !is_null_id(texture_ref["texture"])) {
         let texture_info = client.texture_list.get(texture_ref["texture"])
 
         console.log("Material needs texture, setting up future...", texture_info.texture_promise)
@@ -592,7 +602,7 @@ function on_material_create(client, state) {
                 let mag = get_or_default(sampler, "mag_filter", "LINEAR")
                 let min = get_or_default(sampler, "min_filter", "LINEAR_MIPMAP_LINEAR")
 
-                console.log("Sampler params:", mag, min)
+                //console.log("Sampler params:", mag, min)
 
                 if (mag == "NEAREST") {
                     loader.magFilter = THREE.NearestFilter
@@ -614,6 +624,10 @@ function on_material_create(client, state) {
     state.three_tris.needsUpdate = true
 }
 
+function on_material_update(client, state, new_state) {
+    console.log("UPDATE MATERIAL", new_state)
+}
+
 function on_material_delete(client, state) {
     state.three_points.dispose()
     state.three_lines.dispose()
@@ -621,35 +635,35 @@ function on_material_delete(client, state) {
 }
 
 function on_texture_create(client, state) {
-    console.log("NEW TEXTURE", state)
+    //console.log("NEW TEXTURE", state)
 
     state.texture_promise = new Promise(function (resolve, reject) {
         // get the image
 
-        console.log("Setting up texture promise")
+        //console.log("Setting up texture promise")
 
         let image_info = client.image_list.get(state.image)
 
         let source_info = get_or_default(image_info, "buffer_source", undefined)
 
         if (source_info) {
-            console.log("Using buffer for texture source")
+            //console.log("Using buffer for texture source")
             // its a buffer
             let buffer_view_info = client.bufferview_list.get(source_info)
             let buffer_info = client.buffer_list.get(buffer_view_info.source_buffer)
 
-            console.log("Source buffer byte promise", buffer_info.byte_promise)
+            //console.log("Source buffer byte promise", buffer_info.byte_promise)
 
             buffer_info.byte_promise.then(function (bytes) {
 
-                console.log("Image source buffer ready for texture")
+                //console.log("Image source buffer ready for texture")
 
                 const b_offset = get_or_default(buffer_view_info, 'offset', 0)
                 const b_len = get_or_default(buffer_view_info, 'length', 0)
 
                 const view = bytes.slice(b_offset, b_offset + b_len)
 
-                console.log("Texture buffer info:", b_offset, b_len, bytes.byteLength, view)
+                //console.log("Texture buffer info:", b_offset, b_len, bytes.byteLength, view)
 
                 let data = "data:image/png;base64," + btoa(
                     new Uint8Array(view)
@@ -684,7 +698,7 @@ function start_connect() {
         url = new URL("ws://localhost:50000");
     }
 
-    console.log(`Starting connection to ${url}`)
+    //console.log(`Starting connection to ${url}`)
 
     client = NOO.connect(url.toString(),
         {
@@ -701,6 +715,7 @@ function start_connect() {
             },
             material: {
                 on_create: on_material_create,
+                on_update: on_material_update,
                 on_delete: on_material_delete
             },
             texture: {
@@ -718,15 +733,15 @@ function start_connect() {
 
     scene.add(light_object)
 
-    let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 2.0)
+    // let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 2.0)
 
-    light_object2.position.set(-1, 1, -1)
-    light_object2.castShadow = false
+    // light_object2.position.set(-1, 1, -1)
+    // light_object2.castShadow = false
 
-    scene.add(light_object2)
+    //scene.add(light_object2)
 
-    //let amb_light_object = new THREE.AmbientLight('white', .1)
-    //scene.add(amb_light_object)
+    let amb_light_object = new THREE.AmbientLight(0xffffff, .1)
+    scene.add(amb_light_object)
 }
 
 camera.position.z = 5;
