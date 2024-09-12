@@ -212,8 +212,6 @@ function view_to_index(patch, three_geometry, on_done) {
 function make_instances(client, mesh, instances_source, buffer_data) {
     let view = client.bufferview_list.get(instances_source.view)
 
-    //console.log("Setting up instances");
-
     if ("stride" in instances_source) {
         let s = instances_source.stride
         if (s > format_to_bytesize["MAT4"]) {
@@ -222,6 +220,8 @@ function make_instances(client, mesh, instances_source, buffer_data) {
     }
 
     let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
+
+    console.log("Setting up instances: " + instance_count);
 
     let typed_arr = new Float32Array(buffer_data, view.offset, instance_count * 16)
 
@@ -266,12 +266,20 @@ function make_instances(client, mesh, instances_source, buffer_data) {
 
         matrix.compose(offset, orientation, scale);
 
+        console.log(matrix)
+
         mesh.setMatrixAt(i, matrix);
         mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
     }
 
     mesh.instanceMatrix.needsUpdate = true
-    mesh.instanceColor.needsUpdate = true
+
+    if (mesh.instanceColor) {
+        // this can be null if the mesh doesnt support colors, which is all 
+        // the time
+        mesh.instanceColor.needsUpdate = true
+    }
+
 }
 
 function noo_color_convert(noo_col) {
