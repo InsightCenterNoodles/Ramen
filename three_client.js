@@ -364,6 +364,7 @@ function make_render_rep(client, parent, render_rep) {
                 let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
 
                 switch (i.noo_patch.type) {
+                    
                     case "TRIANGLES":
                         sub_object = new THREE.InstancedMesh(i, mat, instance_count)
                         make_instances(client, mat, sub_object, inst, buffer_data)
@@ -607,6 +608,8 @@ function on_material_create(client, state) {
         color: noo_base_col,
         metalness: noo_pbr.metallic,
         roughness: noo_pbr.roughness,
+        opacity: noo_pbr.base_color[3],
+        transparent: state.use_alpha,
         //vertexColors: true,
     })
 
