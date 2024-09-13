@@ -38,7 +38,7 @@
 
         on_create_msg(client, m) {
             let slot = m.id[0]
-            //console.log(this.name, "create", slot)
+            // console.log(this.name, "create", slot, m)
             this.slot_list[slot] = m
             if (this.client_delegate.on_create) {
                 this.client_delegate.on_create(client, m)
@@ -207,6 +207,18 @@
             }
 
             this.delegate_handlers.get(mid)(this, content)
+        }
+
+        has_method(name) {
+            let slot_array = Object.values(this.delegate_lists["method"].slot_list)
+            const check_name = (element) => element.name === name
+            return slot_array.findIndex(check_name) != -1
+        } 
+
+        get_method_by_name(name) {
+            let slot_array = Object.values(this.delegate_lists["method"].slot_list)
+            const check_name = (element) => element.name === name
+            return slot_array.find(check_name)
         }
     }
 

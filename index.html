@@ -283,6 +283,7 @@
             background-color: var(--accent-bg);
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="cbor.js" type="text/javascript"></script>
     <script src="ramen.js" type="text/javascript"></script>
     <script src="three.js" type="text/javascript"></script>
@@ -303,6 +304,15 @@
 
         </div>
         <hr>
+        <div id="time_controls" style="display:none;">
+            <button type="button" class="btn btn-default btn-sm fa fa-step-backward" onclick="onStepBackward(this);">
+            </button>
+            <button type="button" class="btn btn-default btn-sm fa fa-play" onclick="onPlayPause(this);">
+            </button>
+            <button type="button" class="btn btn-default btn-sm fa fa-step-forward" onclick="onStepForward(this);">
+            </button>
+            <hr>
+        </div>
 
         <div>
             
