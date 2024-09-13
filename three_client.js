@@ -209,7 +209,7 @@ function view_to_index(patch, three_geometry, on_done) {
     });
 }
 
-function make_instances(client, mesh, instances_source, buffer_data) {
+function make_instances(client, mat, mesh, instances_source, buffer_data) {
     let view = client.bufferview_list.get(instances_source.view)
 
     if ("stride" in instances_source) {
@@ -221,15 +221,30 @@ function make_instances(client, mesh, instances_source, buffer_data) {
 
     let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
 
-    console.log("Setting up instances: " + instance_count);
+    console.log("Setting up instances: " + instance_count)
 
     let typed_arr = new Float32Array(buffer_data, view.offset, instance_count * 16)
 
-    const matrix = new THREE.Matrix4();
-    const offset = new THREE.Vector3();
-    const color = new THREE.Vector3();
-    const orientation = new THREE.Quaternion();
-    const scale = new THREE.Vector3(1, 1, 1);
+    let matrix = new THREE.Matrix4()
+    let offset = new THREE.Vector3()
+    let color = new THREE.Vector3()
+    let orientation = new THREE.Quaternion()
+    let scale = new THREE.Vector3(1, 1, 1)
+
+    const uvOffset = new Float32Array(instance_count * 2);
+
+    mat.onBeforeCompile = function (shader) {
+        shader.vertexShader = 'attribute vec2 uvOffset;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace(
+            '#include <uv_vertex>',
+            [
+                '#ifdef USE_MAP',
+                'vMapUv += uvOffset;',
+                '#endif',
+
+            ].join('\n')
+        );
+    };
 
     for (let i = 0; i < instance_count; i++) {
         let float_offset = i * 16;
@@ -241,6 +256,8 @@ function make_instances(client, mesh, instances_source, buffer_data) {
             typed_arr[read_off],
             typed_arr[read_off + 1],
             typed_arr[read_off + 2])
+
+        uvOffset[i * 2] = typed_arr[read_off + 3]
 
         read_off += 4
 
@@ -264,6 +281,8 @@ function make_instances(client, mesh, instances_source, buffer_data) {
             typed_arr[read_off + 1],
             typed_arr[read_off + 2])
 
+        uvOffset[i * 2 + 1] = typed_arr[read_off + 3]
+
         matrix.compose(offset, orientation, scale);
 
         console.log(matrix)
@@ -271,6 +290,10 @@ function make_instances(client, mesh, instances_source, buffer_data) {
         mesh.setMatrixAt(i, matrix);
         mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
     }
+
+    console.log(mesh)
+
+    mesh.geometry.setAttribute("uvOffset", new THREE.InstancedBufferAttribute(uvOffset, 2));
 
     mesh.instanceMatrix.needsUpdate = true
 
@@ -343,7 +366,7 @@ function make_render_rep(client, parent, render_rep) {
                 switch (i.noo_patch.type) {
                     case "TRIANGLES":
                         sub_object = new THREE.InstancedMesh(i, mat, instance_count)
-                        make_instances(client, sub_object, inst, buffer_data)
+                        make_instances(client, mat, sub_object, inst, buffer_data)
                         break;
                     default:
                         throw "Not yet implemented"
