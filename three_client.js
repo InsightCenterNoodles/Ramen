@@ -1,18 +1,12 @@
 
 // Set up render window
 canvas = document.querySelector("#c")
-//width = document.getElementById("three_spot").width
-// height = document.getElementById("three_spot").height
-//width = 500
-//height = 500
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
-//renderer.setSize(width, height);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById("three_spot").appendChild(renderer.domElement);
 
 controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -364,7 +358,7 @@ function make_render_rep(client, parent, render_rep) {
                 let instance_count = (buffer_data.byteLength - view.offset) / format_to_bytesize["MAT4"]
 
                 switch (i.noo_patch.type) {
-                    
+
                     case "TRIANGLES":
                         sub_object = new THREE.InstancedMesh(i, mat, instance_count)
                         make_instances(client, mat, sub_object, inst, buffer_data)
@@ -555,6 +549,8 @@ function on_mesh_create(client, state) {
             let g = new THREE.BufferGeometry();
 
             g.noo_patch = p
+            g.receiveShadow = true;
+            g.castShadow = true;
 
             //console.log("Patch", p)
             for (a of p.attributes) {
@@ -597,8 +593,6 @@ function on_material_create(client, state) {
     const noo_pbr = state.pbr_info
 
     const noo_base_col = noo_color_convert(noo_pbr.base_color)
-    //const noo_base_col = noo_color_convert([0.9, 0.85, 0.49, 1])
-    //const noo_base_col = noo_color_convert([1, 0.5, 0.5, 1])
 
     console.log("Base color", noo_pbr.base_color, noo_base_col)
 
@@ -610,7 +604,6 @@ function on_material_create(client, state) {
         roughness: noo_pbr.roughness,
         opacity: noo_pbr.base_color[3],
         transparent: state.use_alpha,
-        //vertexColors: true,
     })
 
     if (get_or_default(state, "double_sided", false)) {
@@ -811,10 +804,12 @@ function onStepForward(element) {
 }
 
 {
-    let light_object = new THREE.DirectionalLight(0xffffff, 2.0)
+    let light_object = new THREE.DirectionalLight(0xffffff, 1.0)
 
     light_object.position.set(1, 1, 1)
     light_object.castShadow = true
+    light_object.shadow.mapSize.width = 2048;
+    light_object.shadow.mapSize.height = 2048;
 
     scene.add(light_object)
 
@@ -825,7 +820,9 @@ function onStepForward(element) {
 
     //scene.add(light_object2)
 
-    let amb_light_object = new THREE.AmbientLight(0xffffff, .1)
+    let amb_light_object = new THREE.HemisphereLight(0xffffbb, 0x080820, 2);
+    const hemi_light_helper = new THREE.HemisphereLightHelper(amb_light_object, 10);
+    scene.add(hemi_light_helper);
     scene.add(amb_light_object)
 }
 
