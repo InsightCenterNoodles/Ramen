@@ -38,7 +38,7 @@
 
         on_create_msg(client, m) {
             let slot = m.id[0]
-            // console.log(this.name, "create", slot, m)
+            //console.log(this.name, "create", slot)
             this.slot_list[slot] = m
             if (this.client_delegate.on_create) {
                 this.client_delegate.on_create(client, m)
@@ -148,6 +148,7 @@
 
         on_document_update(client, m) {
             update_keys(this.document, m)
+            console.log("Document:", this.document)
         }
 
         on_document_reset(client, m) {
@@ -219,6 +220,11 @@
             let slot_array = Object.values(this.delegate_lists["method"].slot_list)
             const check_name = (element) => element.name === name
             return slot_array.find(check_name)
+        }
+
+        method_attached(id) {
+            const compare_ids = (element) => id.length === element.length && id.every((value, index) => value === element[index])
+            return this.document.methods_list.findIndex(compare_ids) != -1
         }
     }
 

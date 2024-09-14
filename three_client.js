@@ -721,9 +721,9 @@ function on_method_create(client, state) {
     var e = document.getElementById("time_controls");
 
     // If the server supports time control, turn on the time controls div
-    if(client.has_method("noo::animate_time") && client.has_method("noo::step_time"))
+    if (client.has_method("noo::animate_time") && client.has_method("noo::step_time"))
         e.style.display = 'block';
-    else 
+    else
         e.style.display = 'none';
 }
 
@@ -765,42 +765,58 @@ function start_connect() {
     )
 }
 
-function onPlayPause(element) {
-     if(element.classList.contains("fa-play")){
-      element.classList.remove("fa-play");
-      element.classList.add("fa-pause");
+function on_playpause(element) {
+    let id = client.get_method_by_name("noo::animate_time").id
 
-      let play = [1, {
-        method: client.get_method_by_name("noo::animate_time").id,
-        args: [1] }]
+    if (client.method_attached(id)) {
+        if (element.classList.contains("fa-play")) {
+            element.classList.remove("fa-play");
+            element.classList.add("fa-pause");
 
-       client.socket.send(CBOR.encode(play))
-     } else {
-      element.classList.remove("fa-pause");
-      element.classList.add("fa-play");
+            let play = [1, {
+                method: id,
+                args: [1]
+            }]
 
-      let pause = [1, {
-        method: client.get_method_by_name("noo::animate_time").id,
-        args: [0] }]
+            client.socket.send(CBOR.encode(play))
+        } else {
+            element.classList.remove("fa-pause");
+            element.classList.add("fa-play");
 
-       client.socket.send(CBOR.encode(pause))
-     }  
+            let pause = [1, {
+                method: id,
+                args: [0]
+            }]
+
+            client.socket.send(CBOR.encode(pause))
+        }
+    }
 }
 
-function onStepBackward(element) {
-    let step = [1, {
-        method: client.get_method_by_name("noo::step_time").id,
-        args: [-1] }]
+function on_step_backward(element) {
+    let id = client.get_method_by_name("noo::step_time").id
 
-       client.socket.send(CBOR.encode(step))
+    if (client.method_attached(id)) {
+        let step = [1, {
+            method: id,
+            args: [-1]
+        }]
+
+        client.socket.send(CBOR.encode(step))
+    }
 }
 
-function onStepForward(element) {
-    let step = [1, {
-        method: client.get_method_by_name("noo::step_time").id,
-        args: [1] }]
+function on_step_forward(element) {
+    let id = client.get_method_by_name("noo::step_time").id
 
-       client.socket.send(CBOR.encode(step))
+    if (client.method_attached(id)) {
+        let step = [1, {
+            method: id,
+            args: [1]
+        }]
+
+        client.socket.send(CBOR.encode(step))
+    }
 }
 
 {
