@@ -7,6 +7,7 @@ const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 renderer.shadowMap.enabled = true;
+renderer.setClearColor(0x555555, 1);
 document.getElementById("three_spot").appendChild(renderer.domElement);
 
 controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -54,19 +55,18 @@ function bytes_to_interleaved_buffer(format, bytes, offset, stride, vertex_count
     switch (format) {
         case "U8":
         case "U8VEC4":
-            arr = new Uint8Array(bytes, offset, stride * vertex_count)
+            arr = new Uint8Array(bytes, offset)
             interleaved_count = 1;
             break;
 
         case "U16":
         case "U16VEC2":
-            arr = new Uint16Array(bytes, offset, (stride / 2) * vertex_count)
+            arr = new Uint16Array(bytes, offset)
             interleaved_count = 2;
-            console.log(arr)
             break;
 
         case "U32":
-            arr = new Uint32Array(bytes, offset, (stride / 4) * vertex_count)
+            arr = new Uint32Array(bytes, offset)
             interleaved_count = 4;
             break;
         case "VEC2":
@@ -74,7 +74,7 @@ function bytes_to_interleaved_buffer(format, bytes, offset, stride, vertex_count
         case "VEC4":
         case "MAT3":
         case "MAT4":
-            arr = new Float32Array(bytes, offset, (stride / 4) * vertex_count)
+            arr = new Float32Array(bytes, offset)
             interleaved_count = 4;
             break;
         default:
@@ -327,7 +327,7 @@ function make_render_rep(client, parent, render_rep) {
 
 
         for (i of sub_meshes) {
-            //console.log("Adding sub object...", i)
+            console.log("Adding sub object...", i)
 
             const noo_mat = client.material_list.get(i.noo_patch.material)
 
@@ -347,6 +347,8 @@ function make_render_rep(client, parent, render_rep) {
                     mat = noo_mat.three_tris
                     break;
             }
+
+            let is_transp = mat.opacity < 0.999
 
             let sub_object
 
@@ -390,6 +392,11 @@ function make_render_rep(client, parent, render_rep) {
                         throw "Not yet implemented"
                         break;
                 }
+            }
+
+            if (!is_transp) {
+                sub_object.receiveShadow = true
+                sub_object.castShadow = true
             }
 
             group.add(sub_object)
@@ -558,7 +565,7 @@ function on_mesh_create(client, state) {
 
                 view_to_attribute(p, a, g, dec_func)
 
-                //console.log("Attribute", a.semantic)
+                console.log("Attribute", a.semantic)
 
                 if (a.semantic == "NORMAL") {
                     has_normals = true
@@ -569,7 +576,6 @@ function on_mesh_create(client, state) {
                 to_go += 1
                 view_to_index(p, g, dec_func)
             }
-
 
             //console.log("Adding sub mesh...", g)
 
@@ -647,6 +653,8 @@ function on_material_create(client, state) {
 
             state.three_tris.map = loader
             state.three_tris.needsUpdate = true
+
+            console.log(state.three_tris.map)
         })
 
     }
@@ -707,14 +715,20 @@ function on_texture_create(client, state) {
 
                 loader.load(url, function (bitmap) {
                     let texture = new THREE.Texture(bitmap)
+                    texture.colorSpace = THREE.SRGBColorSpace
                     texture.needsUpdate = true
+
+                    console.log(texture.image.width, texture.image.height)
 
                     if (!is_power_two(texture.image.width) || !is_power_two(texture.image.height)) {
                         console.log("Non-power of two texture, disabling mipmaps")
+                        texture.generateMipmaps = false
                         texture.minFilter = THREE.LinearFilter
                         texture.wrapS = THREE.ClampToEdgeWrapping;
                         texture.wrapT = THREE.ClampToEdgeWrapping;
                     }
+
+                    console.log("TEXTURE", texture)
 
                     URL.revokeObjectURL(url);
 
@@ -836,14 +850,19 @@ function on_step_forward(element) {
 }
 
 {
-    let light_object = new THREE.DirectionalLight(0xffffff, 1.0)
 
-    light_object.position.set(1, 1, 1)
-    light_object.castShadow = true
-    light_object.shadow.mapSize.width = 2048;
-    light_object.shadow.mapSize.height = 2048;
+    // {
+    //     let ambient = new THREE.AmbientLight(0xffffff, .5)
+    //     scene.add(ambient)
+    // }
 
-    scene.add(light_object)
+    // let light_object = new THREE.DirectionalLight(0xffffff, 1.0)
+
+    // light_object.position.set(1, 1, 1)
+    // light_object.castShadow = true
+
+
+    // scene.add(light_object)
 
     // let light_object2 = new THREE.DirectionalLight(0xf0f0ff, 2.0)
 
@@ -852,10 +871,23 @@ function on_step_forward(element) {
 
     //scene.add(light_object2)
 
-    let amb_light_object = new THREE.HemisphereLight(0xffffbb, 0x080820, 2);
-    const hemi_light_helper = new THREE.HemisphereLightHelper(amb_light_object, 10);
-    scene.add(hemi_light_helper);
-    scene.add(amb_light_object)
+    {
+        let hemi = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 2.0);
+        //hemi.castShadow = true
+        scene.add(hemi)
+    }
+
+    {
+        let dirlight = new THREE.DirectionalLight(0xFFFFFF, 1.0);
+        dirlight.castShadow = true
+        dirlight.shadow.mapSize.width = 2048;
+        dirlight.shadow.mapSize.height = 2048;
+        dirlight.position.set(0, 10, 5);
+        dirlight.target.position.set(0, 0, 0);
+        scene.add(dirlight)
+        scene.add(dirlight.target);
+    }
+
 }
 
 camera.position.z = 5;
@@ -865,12 +897,6 @@ const divisions = 10;
 
 const gridHelper = new THREE.GridHelper(size, divisions);
 scene.add(gridHelper);
-
-// var cube = new THREE.Mesh(
-//     new THREE.BoxGeometry(1, 1, 1, 2, 2, 2),
-//     new THREE.MeshPhysicalMaterial({ color: "grey" })
-// )
-// scene.add(cube)
 
 // from Three.js tut
 function resizeRendererToDisplaySize(renderer) {
