@@ -60,12 +60,13 @@ function bytes_to_interleaved_buffer(format, bytes, offset, stride, vertex_count
 
         case "U16":
         case "U16VEC2":
-            arr = new Uint16Array(bytes, offset, stride / 2 * vertex_count)
+            arr = new Uint16Array(bytes, offset, (stride / 2) * vertex_count)
             interleaved_count = 2;
+            console.log(arr)
             break;
 
         case "U32":
-            arr = new Uint32Array(bytes, offset, stride / 4 * vertex_count)
+            arr = new Uint32Array(bytes, offset, (stride / 4) * vertex_count)
             interleaved_count = 4;
             break;
         case "VEC2":
@@ -73,7 +74,7 @@ function bytes_to_interleaved_buffer(format, bytes, offset, stride, vertex_count
         case "VEC4":
         case "MAT3":
         case "MAT4":
-            arr = new Float32Array(bytes, offset, stride / 4 * vertex_count)
+            arr = new Float32Array(bytes, offset, (stride / 4) * vertex_count)
             interleaved_count = 4;
             break;
         default:
@@ -279,7 +280,7 @@ function make_instances(client, mat, mesh, instances_source, buffer_data) {
 
         matrix.compose(offset, orientation, scale);
 
-        console.log(matrix)
+        //console.log(matrix)
 
         mesh.setMatrixAt(i, matrix);
         mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
@@ -603,7 +604,7 @@ function on_material_create(client, state) {
         metalness: noo_pbr.metallic,
         roughness: noo_pbr.roughness,
         opacity: noo_pbr.base_color[3],
-        transparent: state.use_alpha,
+        transparent: state.use_alpha || false,
     })
 
     if (get_or_default(state, "double_sided", false)) {
@@ -640,6 +641,8 @@ function on_material_create(client, state) {
                 }
             }
 
+            console.log("No sampler needed")
+
             loader.flipY = false
 
             state.three_tris.map = loader
@@ -661,6 +664,10 @@ function on_material_delete(client, state) {
     state.three_tris.dispose()
 }
 
+function is_power_two(value) {
+    return (value & (value - 1)) === 0;
+}
+
 function on_texture_create(client, state) {
     //console.log("NEW TEXTURE", state)
 
@@ -679,29 +686,38 @@ function on_texture_create(client, state) {
             let buffer_view_info = client.bufferview_list.get(source_info)
             let buffer_info = client.buffer_list.get(buffer_view_info.source_buffer)
 
-            //console.log("Source buffer byte promise", buffer_info.byte_promise)
+            console.log("Source buffer byte promise", buffer_info.byte_promise)
 
             buffer_info.byte_promise.then(function (bytes) {
 
-                //console.log("Image source buffer ready for texture")
+                console.log("Image source buffer ready for texture")
 
                 const b_offset = get_or_default(buffer_view_info, 'offset', 0)
                 const b_len = get_or_default(buffer_view_info, 'length', 0)
 
                 const view = bytes.slice(b_offset, b_offset + b_len)
 
-                //console.log("Texture buffer info:", b_offset, b_len, bytes.byteLength, view)
+                console.log("Texture buffer info:", b_offset, b_len, bytes.byteLength, view)
 
-                let data = "data:image/png;base64," + btoa(
-                    new Uint8Array(view)
-                        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
+                let blob = new Blob([view], { type: "image/png" })
+                let url = URL.createObjectURL(blob)
+                //window.open(url);
 
-                //console.log("Data:", data)
+                let loader = new THREE.ImageBitmapLoader();
 
-                let loader = new THREE.TextureLoader();
+                loader.load(url, function (bitmap) {
+                    let texture = new THREE.Texture(bitmap)
+                    texture.needsUpdate = true
 
-                loader.load(data, function (texture) {
+                    if (!is_power_two(texture.image.width) || !is_power_two(texture.image.height)) {
+                        console.log("Non-power of two texture, disabling mipmaps")
+                        texture.minFilter = THREE.LinearFilter
+                        texture.wrapS = THREE.ClampToEdgeWrapping;
+                        texture.wrapT = THREE.ClampToEdgeWrapping;
+                    }
+
+                    URL.revokeObjectURL(url);
+
                     resolve(texture)
                 });
 
