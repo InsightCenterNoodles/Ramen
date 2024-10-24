@@ -144,6 +144,28 @@ function view_to_attribute(patch, attrib, three_geometry, on_done) {
 
         three_geometry.setAttribute(sname, interleaved_attribute)
 
+        if (sname === "position") {
+            // hack to build proper bounding spheres because duh
+
+            let bb = new THREE.Box3();
+
+            let source = interleaved_buffer.array;
+
+            for (let vi = 0; vi < patch.vertex_count; vi++) {
+                let start = vi * interleaved_buffer.stride;
+                let x = source[start]
+                let y = source[start + 1]
+                let z = source[start + 2]
+                bb.expandByPoint(new THREE.Vector3(x, y, z))
+            }
+
+            three_geometry.boundingSphere = new THREE.Sphere()
+
+            bb.getBoundingSphere(three_geometry.boundingSphere)
+        }
+
+
+
         //console.log("Added attribute", interleaved_attribute, "to", three_geometry)
 
         on_done()
@@ -222,19 +244,20 @@ function make_instances(client, mat, mesh, instances_source, buffer_data) {
 
     let matrix = new THREE.Matrix4()
     let offset = new THREE.Vector3()
-    let color = new THREE.Vector3()
     let orientation = new THREE.Quaternion()
     let scale = new THREE.Vector3(1, 1, 1)
 
-    const uvOffset = new Float32Array(instance_count * 2);
+    const uvOffset = new Float32Array(instance_count * 4);
 
     mat.onBeforeCompile = function (shader) {
-        shader.vertexShader = 'attribute vec2 uvOffset;\n' + shader.vertexShader;
+        shader.vertexShader = 'attribute vec4 uvOffset;\n' + shader.vertexShader;
         shader.vertexShader = shader.vertexShader.replace(
             '#include <uv_vertex>',
             [
+                "#include <uv_vertex>",
                 '#ifdef USE_MAP',
-                'vMapUv += uvOffset;',
+                'vMapUv = vMapUv*uvOffset.zw + uvOffset.xy;',
+                //'vMapUv = vMapUv + uvOffset.xy;',
                 '#endif',
 
             ].join('\n')
@@ -252,14 +275,14 @@ function make_instances(client, mat, mesh, instances_source, buffer_data) {
             typed_arr[read_off + 1],
             typed_arr[read_off + 2])
 
-        uvOffset[i * 2] = typed_arr[read_off + 3]
-
         read_off += 4
 
-        color.set(
-            typed_arr[read_off],
-            typed_arr[read_off + 1],
-            typed_arr[read_off + 2])
+        var uv_place = i * 4;
+
+        uvOffset[uv_place] = typed_arr[read_off]
+        uvOffset[uv_place + 1] = typed_arr[read_off + 1]
+        uvOffset[uv_place + 2] = typed_arr[read_off + 2]
+        uvOffset[uv_place + 3] = typed_arr[read_off + 3]
 
         read_off += 4
 
@@ -276,19 +299,19 @@ function make_instances(client, mat, mesh, instances_source, buffer_data) {
             typed_arr[read_off + 1],
             typed_arr[read_off + 2])
 
-        uvOffset[i * 2 + 1] = typed_arr[read_off + 3]
+
 
         matrix.compose(offset, orientation, scale);
 
         //console.log(matrix)
 
         mesh.setMatrixAt(i, matrix);
-        mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
+        //mesh.setColorAt(i, new THREE.Color(color.x, color.y, color.z))
     }
 
     console.log(mesh)
 
-    mesh.geometry.setAttribute("uvOffset", new THREE.InstancedBufferAttribute(uvOffset, 2));
+    mesh.geometry.setAttribute("uvOffset", new THREE.InstancedBufferAttribute(uvOffset, 4));
 
     mesh.instanceMatrix.needsUpdate = true
 
@@ -348,7 +371,7 @@ function make_render_rep(client, parent, render_rep) {
                     break;
             }
 
-            let is_transp = mat.opacity < 0.999
+            let is_transp = mat.transparent || mat.opacity < 0.999
 
             let sub_object
 
@@ -654,7 +677,7 @@ function on_material_create(client, state) {
             state.three_tris.map = loader
             state.three_tris.needsUpdate = true
 
-            console.log(state.three_tris.map)
+            console.log(state.three_tris)
         })
 
     }
@@ -724,9 +747,12 @@ function on_texture_create(client, state) {
                         console.log("Non-power of two texture, disabling mipmaps")
                         texture.generateMipmaps = false
                         texture.minFilter = THREE.LinearFilter
-                        texture.wrapS = THREE.ClampToEdgeWrapping;
-                        texture.wrapT = THREE.ClampToEdgeWrapping;
+                        //texture.wrapS = THREE.ClampToEdgeWrapping;
+                        //texture.wrapT = THREE.ClampToEdgeWrapping;
                     }
+
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
 
                     console.log("TEXTURE", texture)
 
@@ -872,7 +898,7 @@ function on_step_forward(element) {
     //scene.add(light_object2)
 
     {
-        let hemi = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 2.0);
+        let hemi = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 3.0);
         //hemi.castShadow = true
         scene.add(hemi)
     }
