@@ -520,6 +520,40 @@ function on_entity_delete(client, state) {
     }
 }
 
+function extract_location(location, default_host = '') {
+    let result;
+
+    if (typeof location === 'string') {
+        // If it's a string, just store it.
+        result = location;
+    } else if (typeof location === 'object' && location !== null) {
+        // If it's an object, build the URL string from its properties.
+        const scheme = location.scheme || '';
+        // Use the provided 'host' if it's missing in the object.
+        const host = location.host || default_host;
+        const port = location.port ? `:${location.port}` : ''; // If port exists, add it.
+        const path = location.path ? `/${location.path}` : ''; // If path exists, add it.
+
+        // Construct the URL string.
+        result = `${scheme}://${host}${port}${path}`;
+    } else {
+        // If it's neither a string nor a valid object, return a default or error.
+        result = null;
+    }
+
+    return result;
+}
+
+function extract_hostname(url) {
+    try {
+      const parsedUrl = new URL(url);
+      return parsedUrl.hostname; 
+    } catch (e) {
+      console.error('Invalid URL:', e);
+      return null;
+    }
+  }
+
 function on_buffer_create(client, state) {
     //console.log(state)
 
@@ -536,8 +570,14 @@ function on_buffer_create(client, state) {
             return;
         }
 
+        // extract url
+        let hostname = extract_hostname(client.url)
+        let source = extract_location(state.uri_bytes, hostname)
+
+        console.log("Downloading from", source)
+
         let req = new XMLHttpRequest();
-        req.open("GET", state.uri_bytes)
+        req.open("GET", source)
         req.responseType = "arraybuffer";
         req.onload = function () {
             if (req.status == 200) {
@@ -600,7 +640,7 @@ function on_mesh_create(client, state) {
                 view_to_index(p, g, dec_func)
             }
 
-            //console.log("Adding sub mesh...", g)
+            console.log("Adding sub mesh...", g)
 
             arr.push(g)
         }
@@ -792,7 +832,6 @@ function start_connect() {
     }
 
     //console.log(`Starting connection to ${url}`)
-
     client = NOO.connect(url.toString(),
         {
             method: {
@@ -804,7 +843,7 @@ function start_connect() {
                 on_delete: on_entity_delete
             },
             buffer: { on_create: on_buffer_create },
-            //       bufferview : { on_create : on_bufferview_create },
+            // bufferview : { on_create : on_bufferview_create },
             geometry: {
                 on_create: on_mesh_create,
                 on_delete: on_mesh_delete

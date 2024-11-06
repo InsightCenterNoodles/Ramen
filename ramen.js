@@ -73,6 +73,7 @@
 
     class Client {
         constructor(url, delegate_makers) {
+            this.url = url
             this.socket = new WebSocket(url)
             this.socket.binaryType = "arraybuffer"
 
