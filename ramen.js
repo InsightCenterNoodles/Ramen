@@ -201,7 +201,7 @@
         }
 
         handle_decoded_message(mid, content) {
-            console.log("Handling", mid, content)
+            //console.log("Handling", mid, content)
 
             if (!this.delegate_handlers.has(mid)) {
                 console.log("unknown message")
