@@ -73,9 +73,10 @@
 
     class Client {
         constructor(url, delegate_makers) {
-            this.url = url
-            this.socket = new WebSocket(url)
+            this.socket = new WebSocket(url.toString())
             this.socket.binaryType = "arraybuffer"
+
+            this.hostname = url.hostname
 
             this.socket.onopen = this.on_socket_open.bind(this)
             this.socket.onmessage = this.on_socket_message.bind(this)
@@ -83,8 +84,6 @@
             this.socket.onerror = this.on_socket_error.bind(this)
 
             this.delegate_makers = delegate_makers
-
-            console.log(this.delegate_makers)
 
             this.delegate_lists = {}
             this.delegate_handlers = new Map()
@@ -215,7 +214,7 @@
             let slot_array = Object.values(this.delegate_lists["method"].slot_list)
             const check_name = (element) => element.name === name
             return slot_array.findIndex(check_name) != -1
-        } 
+        }
 
         get_method_by_name(name) {
             let slot_array = Object.values(this.delegate_lists["method"].slot_list)

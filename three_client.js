@@ -520,39 +520,39 @@ function on_entity_delete(client, state) {
     }
 }
 
-function extract_location(location, default_host = '') {
-    let result;
-
-    if (typeof location === 'string') {
-        // If it's a string, just store it.
-        result = location;
-    } else if (typeof location === 'object' && location !== null) {
-        // If it's an object, build the URL string from its properties.
-        const scheme = location.scheme || '';
-        // Use the provided 'host' if it's missing in the object.
-        const host = location.host || default_host;
-        const port = location.port ? `:${location.port}` : ''; // If port exists, add it.
-        const path = location.path ? `/${location.path}` : ''; // If path exists, add it.
-
-        // Construct the URL string.
-        result = `${scheme}://${host}${port}${path}`;
-    } else {
-        // If it's neither a string nor a valid object, return a default or error.
-        result = null;
+function buildURL(uriParts, hostOverride = null) {
+    if (!uriParts.scheme) {
+        throw new Error("The 'scheme' property is required.");
     }
 
-    return result;
+    let url = `${uriParts.scheme}://`;
+
+    // Use the override for the host if provided, otherwise use the host from uriParts
+    const host = hostOverride || uriParts.host;
+    if (host) {
+        url += host;
+    }
+
+    if (uriParts.port) {
+        url += `:${uriParts.port}`;
+    }
+
+    if (uriParts.path) {
+        // Ensure the path starts with a `/` but avoid double slashes.
+        url += uriParts.path.startsWith('/') ? uriParts.path : `/${uriParts.path}`;
+    }
+
+    if (uriParts.query && Object.keys(uriParts.query).length > 0) {
+        const queryParams = new URLSearchParams(uriParts.query).toString();
+        url += `?${queryParams}`;
+    }
+
+    if (uriParts.fragment) {
+        url += `#${uriParts.fragment}`;
+    }
+
+    return url;
 }
-
-function extract_hostname(url) {
-    try {
-      const parsedUrl = new URL(url);
-      return parsedUrl.hostname; 
-    } catch (e) {
-      console.error('Invalid URL:', e);
-      return null;
-    }
-  }
 
 function on_buffer_create(client, state) {
     //console.log(state)
@@ -570,13 +570,18 @@ function on_buffer_create(client, state) {
             return;
         }
 
-        // extract url
-        let hostname = extract_hostname(client.url)
-        let source = extract_location(state.uri_bytes, hostname)
+        var source = state.uri_bytes
 
-        console.log("Downloading from", source)
+        if (typeof source === "string" || source instanceof String) {
+            //pass
+        } else {
+            source = buildURL(source, client.hostname)
+        }
+
+        console.log("Fetch", source)
 
         let req = new XMLHttpRequest();
+
         req.open("GET", source)
         req.responseType = "arraybuffer";
         req.onload = function () {
@@ -832,7 +837,8 @@ function start_connect() {
     }
 
     //console.log(`Starting connection to ${url}`)
-    client = NOO.connect(url.toString(),
+
+    client = NOO.connect(url,
         {
             method: {
                 on_create: on_method_create,
